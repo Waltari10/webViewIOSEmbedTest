@@ -25,6 +25,18 @@
                 transform: rotate(360deg);
             }
         }
+
+        .results {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .result-item {
+            margin: 5px 0;
+            font-family: monospace;
+        }
     </style>
 </head>
 
@@ -33,6 +45,8 @@
     <div id="mydiv"></div>
 
     <script type="text/babel">
+        const { useState } = React;
+
         function Hello({ message }) {
             return <h1>{message}</h1>;
         }
@@ -41,30 +55,80 @@
             return <div className="spinner"></div>;
         }
 
-        function callNative() {
-            window.webkit.messageHandlers.nativeHandler.postMessage("requestString");
+        function Results({ times }) {
+            if (!times.length) return null;
+
+            const totalTime = times.reduce((sum, time) => sum + time, 0);
+
+            return (
+                <div className="results">
+                    {times.map((time, index) => (
+                        <div key={index} className="result-item">
+                            Call {index + 1}: {time.toFixed(2)}ms
+                        </div>
+                    ))}
+                    <div className="result-item" style={{ fontWeight: 'bold' }}>
+                        Total time: {totalTime.toFixed(2)}ms
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [message, setMessage] = useState("Hello World!");
+            const [times, setTimes] = useState([]);
+            const [isLoading, setIsLoading] = useState(false);
+
+            async function callNative() {
+                return new Promise((resolve) => {
+                    const startTime = performance.now();
+                    window.webkit.messageHandlers.nativeHandler.postMessage("requestString");
+
+                    // Store the original updateMessage function
+                    const originalUpdateMessage = window.updateMessage;
+
+                    // Override updateMessage to capture timing
+                    window.updateMessage = (msg) => {
+                        const endTime = performance.now();
+                        const duration = endTime - startTime;
+                        resolve({ duration, message: msg });
+
+                        // Restore original function
+                        window.updateMessage = originalUpdateMessage;
+                    };
+                });
+            }
+
+            async function makeMultipleCalls() {
+                setIsLoading(true);
+                setTimes([]);
+                const newTimes = [];
+
+                for (let i = 0; i < 10; i++) {
+                    const result = await callNative();
+                    newTimes.push(result.duration);
+                    setMessage(result.message);
+                    setTimes([...newTimes]);
+                }
+
+                setIsLoading(false);
+            }
+
+            return (
+                <div>
+                    <Hello message={message} />
+                    <button onClick={makeMultipleCalls} disabled={isLoading}>
+                        {isLoading ? 'Calling Native...' : 'Call Swift 10x'}
+                    </button>
+                    {isLoading && <LoadingSpinner />}
+                    <Results times={times} />
+                </div>
+            );
         }
 
         const container = document.getElementById('mydiv');
         const root = ReactDOM.createRoot(container);
-
-        root.render(
-            <div>
-                <Hello message="Hello World!" />
-                <button onClick={callNative}>Call Swift</button>
-                <LoadingSpinner />
-            </div>
-        );
-
-        // Expose a function for native iOS to call
-        window.updateMessage = function (msg) {
-            root.render(
-                <div>
-                    <Hello message={msg} />
-                    <LoadingSpinner />
-                </div>
-            );
-        };
+        root.render(<App />);
     </script>
 
 </body>
