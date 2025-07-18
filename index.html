@@ -100,6 +100,7 @@
             }
 
             async function makeMultipleCalls() {
+                let start = Date.now()
                 setIsLoading(true);
                 setTimes([]);
                 const newTimes = [];
@@ -112,6 +113,10 @@
                 }
 
                 setIsLoading(false);
+
+                let end = Date.now()
+                let timeTaken = end - start
+                setMessage(`Time taken: ${timeTaken}ms`)
             }
 
             return (
