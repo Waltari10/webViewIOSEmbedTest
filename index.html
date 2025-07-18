@@ -16,9 +16,21 @@
             return <h1>{message}</h1>;
         }
 
+        function callNative() {
+            window.webkit.messageHandlers.nativeHandler.postMessage("requestString");
+        }
+
+
         const container = document.getElementById('mydiv');
+
         const root = ReactDOM.createRoot(container);
-        root.render(<Hello message="Hello World!" />);
+
+        root.render(
+            <div>
+                <Hello message="Hello World!" />
+                <button onclick="callNative()">Call Swift</button>
+            </div>
+        );
 
         // Expose a function for native iOS to call
         window.updateMessage = function (msg) {
